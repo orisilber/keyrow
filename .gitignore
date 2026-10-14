@@ -1,0 +1,59 @@
+# macOS and editor state
+.DS_Store
+._*
+.AppleDouble/
+.LSOverride
+.idea/
+.vscode/
+*.swp
+*~
+xcuserdata/
+*.xcuserstate
+
+# Local builds and distributions
+.build/
+build/
+dist/
+DerivedData/
+*.app/
+*.dSYM/
+*.o
+*.swiftmodule
+*.swiftdoc
+*.swiftsourceinfo
+*.zip
+*.dmg
+*.pkg
+
+# Runtime diagnostics, observations, and test evidence
+.verification/
+work/
+outputs/
+logs/
+*.log
+*.err
+verification-driver/
+navigation-state.json
+verification.json
+verification-history.json
+overlay-preview.png
+verification-evidence/
+screenshots/
+traces/
+
+# Python caches and environments
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Local configuration and credentials
+.env
+.env.*
+!.env.example
+.netrc
+*.pem
+*.key
+*.p12
+*.pfx

@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="en"><meta charset="utf-8"><title>KeyRow browser verification</title>
+<style>body{font:18px system-ui;margin:40px;line-height:1.6}button,input,select,a{margin:8px;padding:10px;font:inherit}.columns{display:flex;gap:30px}.area{height:260px;width:340px;overflow:auto;border:2px solid #999;padding:14px}.spacer{height:1800px}iframe{height:180px;width:700px;border:1px solid #888}#result{background:#e1f3e6;padding:15px} </style>
+<h1>KeyRow browser verification</h1>
+<p id="result" role="status">Clicks: 0 · Double clicks: 0 · Context clicks: 0</p>
+<button id="count">Count click</button><button id="disabled" disabled>Disabled button</button>
+<label><input type="checkbox" id="check"> Enable browser option</label>
+<label>Practice text <input id="text" placeholder="Practice text"></label><span id="input-returns" role="status">Input returns: 0</span>
+<select aria-label="Choose option"><option>One</option><option>Two</option></select>
+<a href="/browser-fixture.html?new-tab=true">Open test link</a>
+<div id="shadow"></div>
+<iframe title="Embedded controls" srcdoc="<button onclick='this.textContent=&quot;Iframe clicked&quot;'>Iframe click</button>"></iframe>
+<div class="columns"><section class="area" tabindex="0" aria-label="Left scrolling area"><p>LEFT START</p><div class="spacer"></div><button>Left bottom</button></section><section class="area" tabindex="0" aria-label="Right scrolling area"><p>RIGHT START</p><div class="spacer" style="width:1600px"></div><button>Right bottom</button></section></div>
+<p id="scroll-result" role="status" style="position:fixed;right:10px;bottom:10px;background:white;padding:6px;font-size:14px">Scroll: page=0 left=0 right=0 rightX=0</p>
+<p id="errors" role="status">Console errors: 0</p>
+<div class="spacer"></div><h2>PAGE BOTTOM</h2><button>Bottom button</button>
+<script>
+let clicks=0,doubles=0,contexts=0;
+const result=document.getElementById('result'); const count=document.getElementById('count');
+function update(){result.textContent=`Clicks: ${clicks} · Double clicks: ${doubles} · Context clicks: ${contexts}`}
+let inputReturns=0;document.getElementById('text').addEventListener('keydown',e=>{if(e.key==='Enter'||e.code==='Enter'||e.keyCode===13)inputReturns++;document.getElementById('input-returns').textContent=`Input returns: ${inputReturns} · Last key: ${e.key}/${e.code}/${e.keyCode}`});
+count.onclick=()=>{clicks++;update()}; count.ondblclick=()=>{doubles++;update()}; count.oncontextmenu=e=>{e.preventDefault();contexts++;update()};
+const shadow=document.getElementById('shadow').attachShadow({mode:'open'});shadow.innerHTML='<button style="font:18px system-ui;padding:10px;margin:8px" onclick="this.textContent=\'Shadow clicked\'">Shadow click</button>';
+const areas=document.querySelectorAll('.area');document.addEventListener('scroll',()=>document.getElementById('scroll-result').textContent=`Scroll: page=${Math.round(scrollY)} left=${Math.round(areas[0].scrollTop)} right=${Math.round(areas[1].scrollTop)} rightX=${Math.round(areas[1].scrollLeft)}`,true);
+let errors=0;const recordError=()=>{errors++;document.getElementById('errors').textContent=`Console errors: ${errors}`};window.addEventListener('error',recordError);window.addEventListener('unhandledrejection',recordError);const originalError=console.error;console.error=(...args)=>{recordError();originalError(...args)};
+</script></html>
