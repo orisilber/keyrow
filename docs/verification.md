@@ -1,6 +1,6 @@
 # KeyRow verification
 
-All 25 release-build scenarios passed on the verification Mac. The app was tested through its global keyboard listener in real browsers and native apps. Search is omitted.
+The initial release passed 25 scenarios on the verification Mac. Those checks did not cover a transparent system window that later caused the visibility failure described below. The app was tested through its global keyboard listener in real browsers and native apps. Search is omitted.
 
 Verified on 15 October 2026, local time, on Apple Silicon with macOS 27.0.1, build 26A434. Browser versions were Chrome 155.0.8059.41, Safari 27.0.1, and Zen 1.23.1b. The active keyboard layout was Colemak DH ANSI.
 
@@ -49,3 +49,13 @@ After diagnostics were removed, a clean launch accepted the real global shortcut
 These results cover the navigation implementation included in this repository. Publication changed the build output and test-workspace defaults to repository-local ignored directories. A fresh build and its self-tests passed after those packaging changes.
 
 Raw Accessibility observations, logs, runtime JSON, screenshots, and app binaries are intentionally excluded from the repository. The UI checks used one Apple Silicon Mac, one display, and the versions listed above. They do not establish compatibility with every website or app. Physical Caps Lock hardware, login-at-startup, other macOS versions, Intel, multiple displays, and newly connected keyboards were not exercised.
+
+## Visibility fix, 15 October 2026
+
+The failure reproduced on the installed app with Accessibility permission and the global listener both active. Accessibility returned the native controls, but a full-screen, click-through Notification Center host was first in the window list. The geometry-only occlusion check removed the visible buttons.
+
+`Tests/verify_visibility.py` failed before the fix because the visible Count click button had no label. With the fix, ambiguous window bounds fall back to Accessibility hit testing. The same check then clicked the button successfully while the system host remained present. A real floating window covered the button, removed its label, and the label returned after the covering window closed.
+
+The fixed build also passed browser fixtures in Chrome, Safari, and Zen, including actual clicks, double-clicks, iframe and shadow controls, nested scrolling, horizontal scrolling, and zero fixture console errors. Public link navigation passed on Wikipedia, GitHub, and Apple in all three browsers. Native checks passed in Calculator, Finder, System Settings, and the KeyRow practice window.
+
+A clean restart of the same signed app with diagnostics disabled accepted the global shortcut and clicked the practice counter. The diagnostic state file stopped updating. The build self-tests and signature verification passed. Raw logs and observations remain local and ignored.

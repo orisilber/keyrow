@@ -47,6 +47,17 @@ Set preferences through KeyRow's settings before running these mode checks:
 
 Restore preferences after each scenario. Reports append to the workspace's `outputs/verification.json` and include the executable SHA-256. Raw observations stay in `work/verification-driver`; the overlay PNG contains KeyRow's labels and outlines. These generated files can contain information about open apps and must stay local.
 
+## Check click-through and covering windows
+
+Open KeyRow's practice window, then run:
+
+```sh
+xcrun swiftc Tests/occlusion-fixture.swift -o "$KEYROW_TEST_WORKSPACE/occlusion-fixture" -framework AppKit
+python3 Tests/verify_visibility.py --cover "$KEYROW_TEST_WORKSPACE/occlusion-fixture"
+```
+
+The check clicks a visible practice button using its label, covers that button with a real floating window, confirms its label disappears, and confirms it returns when the window closes. The fixture closes even if an assertion fails. To reproduce the original failure, run while macOS has a transparent Notification Center host in its window list. The fixture does not dismiss that system window.
+
 ## Clean up
 
 Quit the diagnostic app and stop the fixture server. Close test windows and restore KeyRow preferences. Rebuild with `./build.sh` and launch `build/KeyRow.app` for normal use, with diagnostics disabled.

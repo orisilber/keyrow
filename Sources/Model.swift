@@ -155,10 +155,22 @@ func visibleWindows() -> [VisibleWindow] {
 }
 func visiblePoint(_ target: Target, windows: [VisibleWindow], avoiding: [CGRect] = []) -> CGPoint? {
     if target.missionControl { return CGPoint(x: target.frame.midX, y: target.frame.midY) }
+    let ownerPID = target.ownerPID
+    let system = AXUIElementCreateSystemWide()
+    AXUIElementSetMessagingTimeout(system, 0.15)
     for (x, y) in [(0.5, 0.5), (0.15, 0.15), (0.85, 0.15), (0.15, 0.85), (0.85, 0.85), (0.05, 0.5), (0.95, 0.5), (0.5, 0.05), (0.5, 0.95), (0.01, 0.01), (0.99, 0.99)] {
         let point = CGPoint(x: target.frame.minX + target.frame.width * x, y: target.frame.minY + target.frame.height * y)
         guard !avoiding.contains(where: { $0.contains(point) }) else { continue }
-        if target.role == "AXMenuBarItem" || windows.first(where: { $0.frame.contains(point) })?.pid == target.ownerPID || windows.first(where: { $0.frame.contains(point) }) == nil { return point }
+        let coveringWindow = windows.first(where: { $0.frame.contains(point) })
+        if target.role == "AXMenuBarItem" || coveringWindow == nil || coveringWindow?.pid == ownerPID { return point }
+        // Window bounds also include transparent, click-through system surfaces,
+        // such as Notification Center's full-screen host. Ask Accessibility which
+        // app actually receives this point before treating that surface as cover.
+        var hit: AXUIElement?
+        if AXUIElementCopyElementAtPosition(system, Float(point.x), Float(point.y), &hit) == .success, let hit {
+            var hitPID: pid_t = 0
+            if AXUIElementGetPid(hit, &hitPID) == .success && hitPID == ownerPID { return point }
+        }
     }
     return nil
 }
