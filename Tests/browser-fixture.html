@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en"><meta charset="utf-8"><title>KeyRow browser verification</title>
+<html lang="en"><meta charset="utf-8"><link rel="icon" href="data:,"><title>KeyRow browser verification</title>
 <style>body{font:18px system-ui;margin:40px;line-height:1.6}button,input,select,a{margin:8px;padding:10px;font:inherit}.columns{display:flex;gap:30px}.area{height:260px;width:340px;overflow:auto;border:2px solid #999;padding:14px}.spacer{height:1800px}iframe{height:180px;width:700px;border:1px solid #888}#result{background:#e1f3e6;padding:15px} </style>
 <h1>KeyRow browser verification</h1>
 <p id="result" role="status">Clicks: 0 · Double clicks: 0 · Context clicks: 0</p>
@@ -8,6 +8,7 @@
 <label>Practice text <input id="text" placeholder="Practice text"></label><span id="input-returns" role="status">Input returns: 0</span>
 <select aria-label="Choose option"><option>One</option><option>Two</option></select>
 <a href="/browser-fixture.html?new-tab=true">Open test link</a>
+<span id="hyper-result" role="status">Hyper chords: 0 · Released keys: 0 · Stuck modifiers: 0</span>
 <div id="shadow"></div>
 <iframe title="Embedded controls" srcdoc="<button onclick='this.textContent=&quot;Iframe clicked&quot;'>Iframe click</button>"></iframe>
 <div class="columns"><section class="area" tabindex="0" aria-label="Left scrolling area"><p>LEFT START</p><div class="spacer"></div><button>Left bottom</button></section><section class="area" tabindex="0" aria-label="Right scrolling area"><p>RIGHT START</p><div class="spacer" style="width:1600px"></div><button>Right bottom</button></section></div>
@@ -15,6 +16,9 @@
 <p id="errors" role="status">Console errors: 0</p>
 <div class="spacer"></div><h2>PAGE BOTTOM</h2><button>Bottom button</button>
 <script>
+if(new URLSearchParams(location.search).has('dynamic')){const run=new URLSearchParams(location.search).get('run');setInterval(()=>{fetch('/_keyrow-fixture-state.json',{cache:'no-store'}).then(r=>r.json()).then(state=>{if(state.run!==run)return;let delayed=document.getElementById('delayed-control');if(state.ready&&!delayed){delayed=document.createElement('button');delayed.id='delayed-control';delayed.textContent='Delayed control';delayed.onclick=()=>{delayed.textContent='Delayed clicked'};document.getElementById('count').after(delayed)}else if(!state.ready&&delayed){delayed.remove()}}).catch(()=>{})},100)}
+let chords=0,released=0,stuck=0;
+document.addEventListener('keydown',e=>{if(e.key==='F19'||e.code==='F19'){e.preventDefault();if(e.ctrlKey&&e.altKey&&e.shiftKey&&e.metaKey)chords++;else if(!e.ctrlKey&&!e.altKey&&!e.shiftKey&&!e.metaKey)released++;else stuck++;document.getElementById('hyper-result').textContent=`Hyper chords: ${chords} · Released keys: ${released} · Stuck modifiers: ${stuck}`}},true);
 let clicks=0,doubles=0,contexts=0;
 const result=document.getElementById('result'); const count=document.getElementById('count');
 function update(){result.textContent=`Clicks: ${clicks} · Double clicks: ${doubles} · Context clicks: ${contexts}`}

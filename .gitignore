@@ -32,6 +32,11 @@ outputs/
 logs/
 *.log
 *.err
+*.ips
+*.crash
+*.xcresult/
+*.profraw
+*.profdata
 verification-driver/
 navigation-state.json
 verification.json
@@ -57,3 +62,6 @@ venv/
 *.key
 *.p12
 *.pfx
+
+# Local asynchronous browser fixture gate
+Tests/_keyrow-fixture-state*

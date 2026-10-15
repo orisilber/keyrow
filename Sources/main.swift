@@ -116,6 +116,15 @@ func verificationDriver(_ args: [String]) {
     }
     guard let command = args.first else { exit(4) }
     switch command {
+    case "hyper-chord":
+        let source = CGEventSource(stateID: .combinedSessionState)
+        func trigger(_ down: Bool) {
+            let event = CGEvent(keyboardEventSource: source, virtualKey: HyperController.trigger, keyDown: down)!
+            event.flags = []; event.post(tap: .cgSessionEventTap)
+            Thread.sleep(forTimeInterval: 0.08)
+        }
+        trigger(true); send(80, flags: []); trigger(false); send(80, flags: [])
+        print("Sent F19 during Hyper and after release")
     case "focus":
         guard args.count > 1, let app = NSRunningApplication.runningApplications(withBundleIdentifier: args[1]).first(where: { $0.processIdentifier != getpid() }) else { print("App not running"); exit(5) }
         app.activate(options: [.activateIgnoringOtherApps])

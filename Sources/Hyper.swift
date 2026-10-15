@@ -1,77 +1,98 @@
 import AppKit
+import IOKit.hidsystem
+import IOKit.hid
+import Carbon
 
 final class HyperController {
-    static let trigger: UInt16 = 79 // F18, the HID mapping's clean press/release trigger.
+    static let trigger = UInt16(kVK_F18) // F18 has distinct press and release events.
     static let flags: CGEventFlags = [.maskCommand, .maskControl, .maskAlternate, .maskShift]
-    static let source: UInt64 = 0x700000039
-    static let destination: UInt64 = 0x700000069
+    static let source: UInt64 = 0x700000000 | UInt64(kHIDUsage_KeyboardCapsLock)
+    static let destination: UInt64 = 0x700000000 | UInt64(kHIDUsage_KeyboardF18)
+    static let legacyDestination: UInt64 = 0x700000069
+    static let src = "HIDKeyboardModifierMappingSrc"
+    static let dst = "HIDKeyboardModifierMappingDst"
+    struct Keyboard {
+        let id: UInt64
+        let read: () throws -> [[String: UInt64]]
+        let write: ([[String: UInt64]]) throws -> Void
+    }
     private(set) var enabled = false
-    private var ownsMapping = false
-    private let src = "HIDKeyboardModifierMappingSrc"
-    private let dst = "HIDKeyboardModifierMappingDst"
-    private func hidutil(_ arguments: [String]) throws -> Data {
-        let process = Process(); process.executableURL = URL(fileURLWithPath: "/usr/bin/hidutil"); process.arguments = ["property"] + arguments
-        let output = Pipe(); let errors = Pipe(); process.standardOutput = output; process.standardError = errors
-        process.arguments = ["property", "--matching", "keyboard"] + arguments
-        try process.run(); let data = output.fileHandleForReading.readDataToEndOfFile(); process.waitUntilExit()
-        if process.terminationStatus != 0 { throw NSError(domain: "KeyRow", code: 1, userInfo: [NSLocalizedDescriptionKey: "macOS could not update the Caps Lock mapping."]) }
-        return data
+    private var owned = Set<UInt64>()
+    private let keyboards: () -> [Keyboard]
+    private let persistOwnership: Bool
+    init(keyboards: (() -> [Keyboard])? = nil) {
+        self.keyboards = keyboards ?? Self.systemKeyboards
+        persistOwnership = keyboards == nil
+        if persistOwnership { owned = Set((UserDefaults.standard.stringArray(forKey: "hyperMappingOwners") ?? []).compactMap(UInt64.init)) }
     }
-    private func read() throws -> [[String: UInt64]] {
-        let data = try hidutil(["--get", "UserKeyMapping"])
-        let text = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-        if text.hasPrefix("RegistryID") {
-            let regex = try NSRegularExpression(pattern: "(?m)^[0-9a-fA-F]+[ \\t]+UserKeyMapping[ \\t]+")
-            let ns = text as NSString
-            let matches = regex.matches(in: text, range: NSRange(location: 0, length: ns.length))
-            guard !matches.isEmpty else { throw NSError(domain: "KeyRow", code: 2, userInfo: [NSLocalizedDescriptionKey: "No keyboard mapping could be read."]) }
-            let values = try matches.enumerated().map { index, match in
-                let start = NSMaxRange(match.range)
-                let end = index + 1 < matches.count ? matches[index + 1].range.location : ns.length
-                return try decode(ns.substring(with: NSRange(location: start, length: end - start)).trimmingCharacters(in: .whitespacesAndNewlines))
-            }
-            guard values.dropFirst().allSatisfy({ $0 == values[0] }) else { throw NSError(domain: "KeyRow", code: 5, userInfo: [NSLocalizedDescriptionKey: "Your keyboards have different mappings. KeyRow has preserved them. Use your existing Hyper remapper."]) }
-            return values[0]
-        }
-        return try decode(text)
+    private func saveOwnership() {
+        if persistOwnership { UserDefaults.standard.set(owned.map(String.init), forKey: "hyperMappingOwners") }
     }
-    private func decode(_ text: String) throws -> [[String: UInt64]] {
-        if text.isEmpty || text == "(null)" || text == "null" { return [] }
-        let data = Data(text.utf8)
-        guard let values = try PropertyListSerialization.propertyList(from: data, options: [], format: nil) as? [[String: Any]] else {
-            throw NSError(domain: "KeyRow", code: 2, userInfo: [NSLocalizedDescriptionKey: "The existing keyboard mapping could not be read. It has been preserved."])
-        }
-        return try values.map { item in
-            func number(_ key: String) -> UInt64? {
-                if let value = item[key] as? NSNumber { return value.uint64Value }
-                if let value = item[key] as? String { return value.hasPrefix("0x") ? UInt64(value.dropFirst(2), radix: 16) : UInt64(value) }
-                return nil
-            }
-            guard let s = number(src), let d = number(dst) else { throw NSError(domain: "KeyRow", code: 3, userInfo: [NSLocalizedDescriptionKey: "The existing keyboard mapping could not be read. It has been preserved."]) }
-            return [src:s,dst:d]
-        }
+    private static func error(_ message: String) -> NSError {
+        NSError(domain: "KeyRow", code: 1, userInfo: [NSLocalizedDescriptionKey: message])
     }
-    private func write(_ mappings: [[String: UInt64]]) throws {
-        let data = try JSONSerialization.data(withJSONObject: ["UserKeyMapping": mappings])
-        _ = try hidutil(["--set", String(data: data, encoding: .utf8)!])
-    }
-    func update(_ requested: Bool) throws {
-        if requested == enabled { return }
-        var mappings = try read()
-        if requested {
-            if let existing = mappings.first(where: { $0[src] == Self.source }) {
-                guard existing[dst] == Self.destination else {
-                    throw NSError(domain: "KeyRow", code: 4, userInfo: [NSLocalizedDescriptionKey: "Caps Lock already has a different mapping. KeyRow has preserved it. Use your existing Hyper remapper or remove that mapping first."])
+    private static let client = IOHIDEventSystemClientCreateSimpleClient(kCFAllocatorDefault)
+    private static func systemKeyboards() -> [Keyboard] {
+        let services = IOHIDEventSystemClientCopyServices(client) as? [IOHIDServiceClient] ?? []
+        return services.filter { IOHIDServiceClientConformsTo($0, 1, 6) != 0 }.compactMap { service in
+            guard let id = IOHIDServiceClientGetRegistryID(service) as? NSNumber else { return nil }
+            return Keyboard(id: id.uint64Value, read: {
+                guard let raw = IOHIDServiceClientCopyProperty(service, "UserKeyMapping" as CFString) else { return [] }
+                guard let values = raw as? [[String: UInt64]] else { throw error("A keyboard mapping could not be read. It has been preserved.") }
+                return values
+            }, write: { mappings in
+                guard IOHIDServiceClientSetProperty(service, "UserKeyMapping" as CFString, mappings as CFArray) else {
+                    throw error("macOS could not update a keyboard's Caps Lock mapping.")
                 }
-            } else {
-                mappings.append([src:Self.source,dst:Self.destination]); try write(mappings); ownsMapping = true
+            })
+        }
+    }
+    // Called periodically while enabled so newly connected and virtual keyboards
+    // receive the mapping without replacing any other key mappings on that device.
+    func update(_ requested: Bool) throws {
+        if !requested && !enabled && owned.isEmpty { return }
+        let devices = keyboards()
+        let current = try devices.map { ($0, try $0.read()) }
+        if requested {
+            guard !devices.isEmpty else { throw Self.error("No keyboard is connected.") }
+            for (_, mappings) in current {
+                if mappings.contains(where: { $0[Self.src] == Self.source && $0[Self.dst] != Self.destination && $0[Self.dst] != Self.legacyDestination }) {
+                    throw Self.error("A keyboard already maps Caps Lock to another key. That mapping has been preserved.")
+                }
+            }
+            let wasEnabled = enabled
+            do {
+            for (device, var mappings) in current where !mappings.contains(where: { $0[Self.src] == Self.source && $0[Self.dst] == Self.destination }) {
+                // Earlier KeyRow builds used the F14 HID usage by mistake.
+                mappings.removeAll { $0[Self.src] == Self.source && $0[Self.dst] == Self.legacyDestination }
+                mappings.append([Self.src: Self.source, Self.dst: Self.destination])
+                try device.write(mappings)
+                owned.insert(device.id); saveOwnership()
+                guard try device.read().contains(where: { $0[Self.src] == Self.source && $0[Self.dst] == Self.destination }) else {
+                    throw Self.error("A keyboard did not accept the Caps Lock mapping.")
+                }
             }
             enabled = true
-        } else {
-            if ownsMapping {
-                mappings.removeAll { $0[src] == Self.source && $0[dst] == Self.destination }
-                try write(mappings); ownsMapping = false
+            } catch {
+                if !wasEnabled {
+                    // Roll back devices already changed if a later device fails.
+                    for (device, _) in current where owned.contains(device.id) {
+                        if var mappings = try? device.read() {
+                            mappings.removeAll { $0[Self.src] == Self.source && $0[Self.dst] == Self.destination }
+                            if (try? device.write(mappings)) != nil { owned.remove(device.id) }
+                        }
+                    }
+                    saveOwnership()
+                }
+                throw error
             }
+        } else {
+            for (device, var mappings) in current where owned.contains(device.id) {
+                mappings.removeAll { $0[Self.src] == Self.source && $0[Self.dst] == Self.destination }
+                try device.write(mappings)
+                owned.remove(device.id)
+            }
+            owned.removeAll(); saveOwnership()
             enabled = false
         }
     }

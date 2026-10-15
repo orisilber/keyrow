@@ -93,6 +93,7 @@ final class Overlay {
             panels.append((panel, view))
         }
     }
+    func flush() { for (_, view) in panels { view.displayIfNeeded() } }
     func hide() { for (panel, _) in panels { panel.orderOut(nil) }; panels.removeAll() }
     func savePreview(to url: URL) {
         guard let (_, view) = panels.first, let bitmap = view.bitmapImageRepForCachingDisplay(in: view.bounds) else { return }

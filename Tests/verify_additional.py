@@ -48,8 +48,8 @@ def native_finder():
     textnode=min((n for n in nodes if filename in str(n.get('AXValue',''))+str(n.get('AXTitle',''))+str(n.get('AXDescription','')) and 'frame' in n),key=lambda n:n['frame'][2]*n['frame'][3])
     x,y,w,h=textnode['frame'];point=(x+w/2,y+h/2)
     info=v.activate('com.apple.finder')
-    candidates=[t for t in info['targets'] if t['role'] in ['AXRow','AXCell'] and t['frame'][0]<=point[0]<=t['frame'][0]+t['frame'][2] and t['frame'][1]<=point[1]<=t['frame'][1]+t['frame'][3]]
-    assert candidates, 'Finder file row was not labelled'
+    candidates=[t for t in info['targets'] if t['role'] in ['AXRow','AXCell','AXTextField'] and t['frame'][0]<=point[0]<=t['frame'][0]+t['frame'][2] and t['frame'][1]<=point[1]<=t['frame'][1]+t['frame'][3]]
+    assert candidates, 'Finder file selection control was not labelled'
     target=min(candidates,key=lambda t:t['frame'][2]*t['frame'][3])
     v.driver('hint',target['label']);v.wait_mode('idle')
     nodes=v.inspect('com.apple.finder')

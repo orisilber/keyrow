@@ -52,7 +52,7 @@ Restore preferences after each scenario. Reports append to the workspace's `outp
 Open KeyRow's practice window, then run:
 
 ```sh
-xcrun swiftc Tests/occlusion-fixture.swift -o "$KEYROW_TEST_WORKSPACE/occlusion-fixture" -framework AppKit
+xcrun swiftc -target arm64-apple-macosx13.0 Tests/occlusion-fixture.swift -o "$KEYROW_TEST_WORKSPACE/occlusion-fixture" -framework AppKit
 python3 Tests/verify_visibility.py --cover "$KEYROW_TEST_WORKSPACE/occlusion-fixture"
 ```
 
@@ -62,4 +62,25 @@ The check clicks a visible practice button using its label, covers that button w
 
 Quit the diagnostic app and stop the fixture server. Close test windows and restore KeyRow preferences. Rebuild with `./build.sh` and launch `build/KeyRow.app` for normal use, with diagnostics disabled.
 
-The earlier Hyper check also inspected the HID Caps Lock mapping, recorded a modifier-only shortcut, activated it through the mapped F18 trigger, clicked a browser control, disabled Hyper, and confirmed removal of the temporary mapping. It was a supervised check and is not an automated scenario in these scripts.
+## Hyper, browser controls, and latency
+
+Enable Hyper in KeyRow's General settings before running the delivery check. These tests use the same local fixture server and diagnostic app as the other scenarios.
+
+```sh
+xcrun swiftc -swift-version 5 -target arm64-apple-macosx13.0 Sources/Hyper.swift Tests/hyper-tests.swift -o "$KEYROW_TEST_WORKSPACE/hyper-tests" -framework AppKit -framework IOKit
+"$KEYROW_TEST_WORKSPACE/hyper-tests"
+python3 Tests/verify_hyper.py
+python3 Tests/verify_browser_controls.py
+python3 Tests/verify_cache.py
+python3 Tests/verify_zen_performance.py --samples 20
+```
+
+The Hyper unit checks cover independent device mappings, legacy F14 migration, a newly connected device, restoration, unrelated mapping edits, conflicts, and rollback after a partial failure. The browser check reads each connected keyboard's mapping, sends F19 while the F18 Hyper trigger is held, and sends F19 again after release. The page must receive all four modifiers on the first key and none on the second.
+
+A physical Caps Lock press requires a person. With diagnostics enabled, compare `hyper_presses` before and after holding and releasing Caps Lock. `hyper_enabled` must be true, the press count must increase, and `hyper_held` must return to false. A synthesized F18 event alone cannot prove the HID mapping.
+
+The browser-controls check uses labels to navigate through Zen's address bar and switch to a generated Wikipedia tab. It clicks Reload and checks that the fixture counter resets, opens File and checks its menu-item labels, and asserts that toolbar and menu labels remain present. The cache check adds and removes a control asynchronously, scrolls the page, navigates, and checks the resulting controls through their actual labels.
+
+The latency check opens YouTube in Zen and verifies that menu, address bar, tab, button, and link labels are included in every sample. It records activation-to-draw timing and checks median below 50 ms and p95 below 100 ms. The maximum remains in the report, including a potentially slower initial cold activation. `source_scan_ms` describes the underlying scan, which may have run in the background; `ready_ms` is the activation time. Timing ends after overlay drawing is submitted and excludes display refresh latency.
+
+Mode checks also accept `--browser app.zen-browser.zen --name Zen`. Use those arguments to run manual confirmation, chaining, scrolling, typing, and ignored-app scenarios in Zen. Restore Automatic click on, Chain clicks off, and the ignored-app list after testing.

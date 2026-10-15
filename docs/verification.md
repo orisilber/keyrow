@@ -1,61 +1,63 @@
 # KeyRow verification
 
-The initial release passed 25 scenarios on the verification Mac. Those checks did not cover a transparent system window that later caused the visibility failure described below. The app was tested through its global keyboard listener in real browsers and native apps. Search is omitted.
+KeyRow 0.1.1 passed 30 distinct interface scenarios on 15 October 2026. The checks drove the actual global keyboard listener in Zen, Chrome, Safari, and native macOS apps. Search is omitted.
 
-Verified on 15 October 2026, local time, on Apple Silicon with macOS 27.0.1, build 26A434. Browser versions were Chrome 155.0.8059.41, Safari 27.0.1, and Zen 1.23.1b. The active keyboard layout was Colemak DH ANSI.
+The tested executable SHA-256 is `246f49403526cb3d7da7d8b98a02e05b673e0feec0bbe380c1bd2d31f37f9803`. Verification used Apple Silicon, macOS 27.0.1 build 26A434, one display, and Colemak DH ANSI. Browser versions were Zen 1.23.1b, Chrome 155.0.8059.41, and Safari 27.0.1.
 
-## Browsers
+## Browser navigation
 
-The fixture checks actual button click counts, double-click and context-click events, shadow DOM, iframe controls, hidden/disabled controls, page scrolling, independent nested vertical scrolling, and horizontal scrolling. The fixture's page-error, unhandled-rejection, and console-error counter remained zero. Chrome also passed checkbox and immediate text-input checks.
-
-| Browser | Result | Scroll-mode scan | Scroll areas | Fixture console errors |
-| --- | --- | --- | --- | --- |
-| Google Chrome | PASS | 200 ms | 5 | 0 |
-| Safari | PASS | 235 ms | 4 | 0 |
-| Zen | PASS | 197 ms | 6 | 0 |
-
-Public-site link navigation passed in every cell below. Each check asserts the resulting document URL, rather than a link URL or browser tab title. The test waits for the loaded document and a stable control position.
-
-| Browser | Wikipedia → English main page | GitHub → README file | Apple → Support |
+| Check | Zen | Chrome | Safari |
 | --- | --- | --- | --- |
-| Chrome | PASS | PASS | PASS |
-| Safari | PASS | PASS | PASS |
-| Zen | PASS | PASS | PASS |
+| Button and double-click counters | PASS | PASS | PASS |
+| Shadow DOM and iframe controls | PASS | PASS | PASS |
+| Disabled and offscreen control filtering | PASS | PASS | PASS |
+| Page, nested vertical, and horizontal scrolling | PASS | PASS | PASS |
+| Fixture console errors | 0 | 0 | 0 |
+| Hyper delivery and release | PASS | PASS | PASS |
+| Wikipedia to English main page | PASS | PASS | PASS |
+| GitHub to README file | PASS | PASS | PASS |
+| Apple to Support | PASS | PASS | PASS |
 
-## Native apps
+Public-site checks asserted the resulting document URL. They waited for the actual document and a stable control position before selecting a label. Fixture checks asserted actual counters and scroll positions.
 
-| App | Verified result |
+Zen's browser-control check used labels to focus the address bar, navigate to Wikipedia, and switch tabs. A labelled Reload button reset the fixture counter. A labelled File menu opened and exposed labelled menu items. Browser toolbar and menu controls remained included in fast mode.
+
+The prepared-label check added and removed a button through the local server without a keyboard or mouse event. It clicked the added button, confirmed the removed control lost its label, and checked controls again after scrolling and navigation.
+
+## Native apps and interaction modes
+
+| App or mode | Verified result |
 | --- | --- |
-| Calculator | A keyboard label clicked 7 and the actual display became 7. |
-| Finder | A keyboard label selected the fixture file in list view. |
-| System Settings | A label opened Appearance. No appearance setting changed. |
-| KeyRow practice | Labels clicked a button, toggled a checkbox, focused and edited text, and scrolled a native area. |
-| Mission Control | Labels appeared automatically, selected KeyRow Practice, closed Mission Control, and brought KeyRow to the foreground. |
+| Calculator | A label clicked 7 and the display became 7. |
+| Finder | A label selected the generated fixture file in list view. |
+| System Settings | A label opened Appearance without changing an appearance setting. |
+| Native practice window | Labels clicked a button, toggled a checkbox, focused and edited text, and scrolled a native area. |
+| Mission Control | Labels appeared automatically, selected KeyRow Practice, closed Mission Control, and brought KeyRow forward. |
+| Window visibility | A visible practice button remained usable beneath the transparent system host. A real covering window removed its label; closing that window restored it. |
+| Zen manual confirmation | Selection, Tab and Shift-Tab, Control-N and Control-P, Backspace, right-click, and Command-click into a new tab passed. |
+| Zen chain clicks | A click refreshed the labels, and selecting a text input ended the chain. |
+| Zen immediate typing | Space and Return reached the newly focused input. |
+| Zen scrolling commands | Half-page up and down, top and bottom, and Shift dash changed the intended nested area's scroll position. |
+| Zen ignored-app setting | Both navigation shortcuts passed through while Zen was ignored. |
 
-Mission Control support accounts for the [macOS 27 accessibility-process change](https://github.com/Hammerspoon/hammerspoon/issues/3897). Window selection also moves the pointer to the chosen thumbnail so the hovered window cannot override the selection.
+Automatic click was restored on, Chain clicks off, and the ignored-app list empty. Hyper remains enabled. Launch on login remained enabled.
 
-## Interaction checks
+## Hyper and timing
 
-Manual confirmation, Tab/Shift-Tab, Control-N/P, Backspace, right-click, Command-click into a new tab, double-click, chain refresh, ending a chain at an input, ignored apps, the literal Command-Shift-J shortcut, half-page scrolling, top/bottom commands, and Shift dash passed.
+The physical Caps Lock hold and release reached the corrected F18 handler. The press count increased, and the held state returned to false. Automated checks on the final build confirmed the mapping on three connected keyboard services. All four modifiers reached the fixture during Hyper, and no modifiers remained after release in each browser.
 
-Immediate spaces and Return pass through to a focused text input. The double-click continuation uses Return outside text inputs.
+The final 20-activation YouTube run in Zen had 144 labels, a 21.5 ms median, a 59.7 ms 95th percentile, and a 221.1 ms maximum. The first activation needed a fresh scan after the page controls changed. The other 19 took less than 60 ms. Browser controls were included in every sample. [Performance and Hyper details](performance.md) describe the timing boundary and remaining cold-scan limit.
 
-The Hyper check installed the Caps Lock → F18 HID mapping, recorded the Control-Option-Shift-Command modifier-only shortcut, activated it through the mapped F18 trigger, and clicked a browser control. Hyper was disabled afterward. A final HID-property read confirmed that the temporary Caps Lock entry was removed. This checks the mapping and its event handler; it does not simulate a physical hardware Caps Lock switch.
+## Production app and source checks
 
-After diagnostics were removed, a clean launch accepted the real global shortcut and clicked the browser counter through its label. The diagnostic state file stopped updating. The local app signature also passed verification. Sampled label counts through 4,000 passed the uniqueness and prefix tests during the build.
+A clean launch with diagnostics disabled accepted the global shortcut. Typing the visible practice-button label incremented its actual counter. The diagnostic file stopped updating. The local app signature passed strict verification.
+
+The build passed label uniqueness and prefix checks through 4,000 targets and shortcut-modifier matching. Hyper unit checks passed for independent device mappings, legacy migration, hot-plug handling, restoration, unrelated edits, conflicts, and partial-failure rollback. Python test files parsed, the app plist passed validation, and the build script passed its syntax check.
 
 ## Scope
 
-These results cover the navigation implementation included in this repository. Publication changed the build output and test-workspace defaults to repository-local ignored directories. A fresh build and its self-tests passed after those packaging changes.
+The initial release's synthesized Hyper test missed a mismatch between the F14 HID destination and the F18 event handler. Version 0.1.1 corrects that mapping and adds the physical check described above. The transparent Notification Center visibility regression also remains covered.
 
-Raw Accessibility observations, logs, runtime JSON, screenshots, and app binaries are intentionally excluded from the repository. The UI checks used one Apple Silicon Mac, one display, and the versions listed above. They do not establish compatibility with every website or app. Physical Caps Lock hardware, login-at-startup, other macOS versions, Intel, multiple displays, and newly connected keyboards were not exercised.
+These checks cover the listed cases on one Mac. They do not establish compatibility with every website, custom control, macOS version, or display setup. A real keyboard disconnect and reconnect, login at startup, Intel, and multiple displays were not exercised. Fresh scans and scrolling scans can exceed 100 ms.
 
-## Visibility fix, 15 October 2026
-
-The failure reproduced on the installed app with Accessibility permission and the global listener both active. Accessibility returned the native controls, but a full-screen, click-through Notification Center host was first in the window list. The geometry-only occlusion check removed the visible buttons.
-
-`Tests/verify_visibility.py` failed before the fix because the visible Count click button had no label. With the fix, ambiguous window bounds fall back to Accessibility hit testing. The same check then clicked the button successfully while the system host remained present. A real floating window covered the button, removed its label, and the label returned after the covering window closed.
-
-The fixed build also passed browser fixtures in Chrome, Safari, and Zen, including actual clicks, double-clicks, iframe and shadow controls, nested scrolling, horizontal scrolling, and zero fixture console errors. Public link navigation passed on Wikipedia, GitHub, and Apple in all three browsers. Native checks passed in Calculator, Finder, System Settings, and the KeyRow practice window.
-
-A clean restart of the same signed app with diagnostics disabled accepted the global shortcut and clicked the practice counter. The diagnostic state file stopped updating. The build self-tests and signature verification passed. Raw logs and observations remain local and ignored.
+[Repeat the interface checks](../Tests/README.md). Logs, raw Accessibility observations, screenshots, runtime JSON, build products, and credentials remain local and excluded from Git.

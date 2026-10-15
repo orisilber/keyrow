@@ -39,7 +39,11 @@ Turn off Automatic click to select a label first and confirm with Return. Chain 
 
 Settings lets you change shortcuts, label characters, label size, theme, scroll keys and speeds, arrow-key behavior, sounds, and ignored apps. Shortcuts can also use modifiers alone. Mission Control can activate clicking automatically.
 
-Hyper maps Caps Lock to Control-Option-Shift-Command while KeyRow runs. KeyRow preserves an existing Caps Lock mapping and refuses to overwrite conflicting or differing keyboard mappings. Quit KeyRow normally to restore any mapping it installs.
+Hyper maps Caps Lock to Control-Option-Shift-Command while KeyRow runs. It updates physical and virtual keyboards separately, including keyboards connected later, and preserves unrelated mappings. Conflicting Caps Lock mappings show an error. Quit KeyRow normally to remove the mappings it installs. To use Caps Lock alone for navigation, enable Hyper and record Caps Lock as the clicking or scrolling shortcut.
+
+Fast labels include browser tabs, the address bar, toolbar buttons, and menus. Decorative text and container elements do not receive duplicate labels. Nearby links to the same destination share one label. KeyRow prepares controls in the background and invalidates them after input, layout changes, scrolling, and navigation.
+
+[Performance and Hyper verification](docs/performance.md) records the measured Zen results and the physical Caps Lock check.
 
 ## Build
 
