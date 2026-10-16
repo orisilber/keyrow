@@ -37,3 +37,7 @@ Injected-device unit checks passed for separate mappings, legacy migration, hot-
 The final executable SHA-256 is `246f49403526cb3d7da7d8b98a02e05b673e0feec0bbe380c1bd2d31f37f9803`.
 
 Verification ran on 15 October 2026 on Apple Silicon, macOS 27.0.1, one display, and Zen 1.23.1b. [The interface-check guide](../Tests/README.md) documents the repeatable checks. Raw observations and timing samples remain local and ignored by Git.
+
+## Reconnect fix in 0.1.2
+
+The 16 October patch opens fresh HID client connections on each mapping poll. The real external-keyboard reconnect and physical Caps Lock check passed without restarting KeyRow. The earlier timing measurements above belong to 0.1.1. See [the current verification report](verification.md) for patch results.

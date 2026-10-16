@@ -64,7 +64,7 @@ Quit the diagnostic app and stop the fixture server. Close test windows and rest
 
 ## Hyper, browser controls, and latency
 
-Enable Hyper in KeyRow's General settings before running the delivery check. These tests use the same local fixture server and diagnostic app as the other scenarios.
+Enable Hyper in KeyRow's General settings before running the delivery check. If Hyper itself opens navigation, temporarily turn on Pause navigation for `verify_hyper.py`, then restore it afterward. The modifier-delivery check focuses the fixture with native Tab presses so it works while navigation is paused. These tests use the same local fixture server and diagnostic app as the other scenarios.
 
 ```sh
 xcrun swiftc -swift-version 5 -target arm64-apple-macosx13.0 Sources/Hyper.swift Tests/hyper-tests.swift -o "$KEYROW_TEST_WORKSPACE/hyper-tests" -framework AppKit -framework IOKit
@@ -84,3 +84,17 @@ The browser-controls check uses labels to navigate through Zen's address bar and
 The latency check opens YouTube in Zen and verifies that menu, address bar, tab, button, and link labels are included in every sample. It records activation-to-draw timing and checks median below 50 ms and p95 below 100 ms. The maximum remains in the report, including a potentially slower initial cold activation. `source_scan_ms` describes the underlying scan, which may have run in the background; `ready_ms` is the activation time. Timing ends after overlay drawing is submitted and excludes display refresh latency.
 
 Mode checks also accept `--browser app.zen-browser.zen --name Zen`. Use those arguments to run manual confirmation, chaining, scrolling, typing, and ignored-app scenarios in Zen. Restore Automatic click on, Chain clicks off, and the ignored-app list after testing.
+
+## Verify keyboard reconnect recovery
+
+The native connection check reads and releases 1,000 fresh HID snapshots without changing mappings. Keep keyboards connected while it runs.
+
+```sh
+xcrun swiftc -swift-version 5 -O -target arm64-apple-macosx13.0 Sources/Hyper.swift Tests/hyper-device-tests.swift -o "$KEYROW_TEST_WORKSPACE/hyper-device-tests" -framework AppKit -framework IOKit
+"$KEYROW_TEST_WORKSPACE/hyper-device-tests"
+python3 Tests/verify_hyper_reconnect.py
+```
+
+For the reconnect check, leave the diagnostic KeyRow app running with Hyper enabled. After the check prints READY, turn the external keyboard off for three seconds and back on. Hold physical Caps Lock for two seconds, then release it. Do not send synthesized F18 events during this check.
+
+The watcher requires an observed device departure or new service, all connected keyboards mapped to F18 again, a physical press-count increase, release of the held state, and no Hyper error. It times out after three minutes. Restarting KeyRow during the check does not establish reconnect recovery.

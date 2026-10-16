@@ -3,6 +3,7 @@
 import argparse
 import re
 import subprocess
+import time
 import verify as v
 
 parser = argparse.ArgumentParser()
@@ -18,9 +19,13 @@ for block in re.findall(r'\{[^{}]*\}', text):
         caps.append(values.get('Dst'))
 assert devices > 0 and len(caps) == devices and all(n == 0x70000006d for n in caps), 'A connected keyboard is missing the Caps Lock to F18 mapping'
 try:
-    v.navigate(args.browser, 'http://127.0.0.1:8765/browser-fixture.html')
+    v.launch(args.name)
+    v.navigate(args.browser, 'http://127.0.0.1:8765/browser-fixture.html', new_tab=True)
     v.expect(args.browser, 'Hyper chords: 0')
-    v.hint(args.browser, 'Practice text')
+    deadline = time.monotonic() + 10
+    while not any(n['role'] == 'AXTextField' and n.get('AXTitle') == 'Practice text' and n.get('AXFocused') for n in v.inspect(args.browser)):
+        assert time.monotonic() < deadline, 'Fixture input did not receive focus'
+        v.driver('key', 'Tab')
     v.driver('hyper-chord')
     v.expect(args.browser, 'Hyper chords: 1 · Released keys: 1 · Stuck modifiers: 0')
     v.record({'browser': args.name, 'scenario': 'Hyper delivery and release', 'status': 'PASS',

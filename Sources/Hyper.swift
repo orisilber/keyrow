@@ -31,22 +31,34 @@ final class HyperController {
     private static func error(_ message: String) -> NSError {
         NSError(domain: "KeyRow", code: 1, userInfo: [NSLocalizedDescriptionKey: message])
     }
-    private static let client = IOHIDEventSystemClientCreateSimpleClient(kCFAllocatorDefault)
-    private static func systemKeyboards() -> [Keyboard] {
-        let services = IOHIDEventSystemClientCopyServices(client) as? [IOHIDServiceClient] ?? []
-        return services.filter { IOHIDServiceClientConformsTo($0, 1, 6) != 0 }.compactMap { service in
-            guard let id = IOHIDServiceClientGetRegistryID(service) as? NSNumber else { return nil }
-            return Keyboard(id: id.uint64Value, read: {
-                guard let raw = IOHIDServiceClientCopyProperty(service, "UserKeyMapping" as CFString) else { return [] }
-                guard let values = raw as? [[String: UInt64]] else { throw error("A keyboard mapping could not be read. It has been preserved.") }
-                return values
-            }, write: { mappings in
-                guard IOHIDServiceClientSetProperty(service, "UserKeyMapping" as CFString, mappings as CFArray) else {
-                    throw error("macOS could not update a keyboard's Caps Lock mapping.")
-                }
-            })
+    // A simple HID client's service connections can outlive the devices they
+    // describe after sleep or reconnection. Take a fresh snapshot on every poll.
+    // Keep its client alive until every service has been released.
+    private final class KeyboardSnapshot {
+        let client: IOHIDEventSystemClient
+        var services: [IOHIDServiceClient]
+        init() {
+            client = IOHIDEventSystemClientCreateSimpleClient(kCFAllocatorDefault)
+            services = (IOHIDEventSystemClientCopyServices(client) as? [IOHIDServiceClient] ?? [])
+                .filter { IOHIDServiceClientConformsTo($0, 1, 6) != 0 }
+        }
+        deinit { withExtendedLifetime(client) { services.removeAll() } }
+        func keyboards() -> [Keyboard] {
+            services.indices.compactMap { index in
+                guard let id = IOHIDServiceClientGetRegistryID(services[index]) as? NSNumber else { return nil }
+                return Keyboard(id: id.uint64Value, read: {
+                    guard let raw = IOHIDServiceClientCopyProperty(self.services[index], "UserKeyMapping" as CFString) else { return [] }
+                    guard let values = raw as? [[String: UInt64]] else { throw error("A keyboard mapping could not be read. It has been preserved.") }
+                    return values
+                }, write: { mappings in
+                    guard IOHIDServiceClientSetProperty(self.services[index], "UserKeyMapping" as CFString, mappings as CFArray) else {
+                        throw error("macOS could not update a keyboard's Caps Lock mapping.")
+                    }
+                })
+            }
         }
     }
+    static func systemKeyboards() -> [Keyboard] { KeyboardSnapshot().keyboards() }
     // Called periodically while enabled so newly connected and virtual keyboards
     // receive the mapping without replacing any other key mappings on that device.
     func update(_ requested: Bool) throws {

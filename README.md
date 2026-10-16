@@ -39,7 +39,7 @@ Turn off Automatic click to select a label first and confirm with Return. Chain 
 
 Settings lets you change shortcuts, label characters, label size, theme, scroll keys and speeds, arrow-key behavior, sounds, and ignored apps. Shortcuts can also use modifiers alone. Mission Control can activate clicking automatically.
 
-Hyper maps Caps Lock to Control-Option-Shift-Command while KeyRow runs. It updates physical and virtual keyboards separately, including keyboards connected later, and preserves unrelated mappings. Conflicting Caps Lock mappings show an error. Quit KeyRow normally to remove the mappings it installs. To use Caps Lock alone for navigation, enable Hyper and record Caps Lock as the clicking or scrolling shortcut.
+Hyper maps Caps Lock to Control-Option-Shift-Command while KeyRow runs. It updates physical and virtual keyboards separately, including keyboards connected later, and preserves unrelated mappings. Conflicting Caps Lock mappings show an error. It opens fresh keyboard connections on each poll so reconnecting devices do not leave it using stale handles. Quit KeyRow normally to remove the mappings it installs. To use Caps Lock alone for navigation, enable Hyper and record Caps Lock as the clicking or scrolling shortcut.
 
 Fast labels include browser tabs, the address bar, toolbar buttons, and menus. Decorative text and container elements do not receive duplicate labels. Nearby links to the same destination share one label. KeyRow prepares controls in the background and invalidates them after input, layout changes, scrolling, and navigation.
 
@@ -64,6 +64,6 @@ Logs, raw Accessibility observations, test evidence, build products, and local c
 
 ## Compatibility
 
-The app reads controls through macOS Accessibility. Apps and custom controls must expose usable accessibility information to receive labels. Testing covers the cases listed in the report. Runtime verification used macOS 27.0.1 and one display. Login-at-startup, other macOS releases, Intel builds, multiple displays, and newly connected keyboard devices were not exercised.
+The app reads controls through macOS Accessibility. Apps and custom controls must expose usable accessibility information to receive labels. Testing covers the cases listed in the report. Runtime verification used macOS 27.0.1 and one display. Recovery after an external keyboard disconnect and reconnect was verified. Login-at-startup, other macOS releases, Intel builds, multiple displays, and additional keyboard models were not exercised.
 
 KeyRow is an independent recreation of Homerow's navigation behavior. Branding, theme-preview artwork, and some settings details differ. Input source follows the current macOS layout rather than a separate override. Homerow's licensing and update service are not included. Search is intentionally absent.
